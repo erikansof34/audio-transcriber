@@ -191,7 +191,7 @@ const EditableText = ({ text, onSave, className, darkMode }) => {
     return (
       <div className={`editable-text ${className} ${darkMode ? "dark" : ""}`}>
         <p className={`transcription-text ${darkMode ? "dark" : ""}`}>{text}</p>
-        <button 
+        <button
           onClick={() => setIsEditing(true)}
           className={`edit-button ${darkMode ? "dark" : ""}`}
           title="Editar texto"
@@ -211,14 +211,14 @@ const EditableText = ({ text, onSave, className, darkMode }) => {
         className={`transcription-text-edit ${darkMode ? "dark" : ""}`}
       />
       <div className="edit-buttons">
-        <button 
+        <button
           onClick={handleSave}
           className={`save-button ${darkMode ? "dark" : ""}`}
           title="Guardar cambios"
         >
           <Save size={16} />
         </button>
-        <button 
+        <button
           onClick={() => {
             setEditedText(text)
             setIsEditing(false)
@@ -262,7 +262,7 @@ const EditableSegment = ({ segment, onSave, darkMode }) => {
         </span>
         <div className={`segment-text-container ${darkMode ? "dark" : ""}`}>
           <p className={`segment-text ${darkMode ? "dark" : ""}`}>{segment.text}</p>
-          <button 
+          <button
             onClick={() => setIsEditing(true)}
             className={`edit-button ${darkMode ? "dark" : ""}`}
             title="Editar segmento"
@@ -287,14 +287,14 @@ const EditableSegment = ({ segment, onSave, darkMode }) => {
           className={`segment-text-edit ${darkMode ? "dark" : ""}`}
         />
         <div className="edit-buttons">
-          <button 
+          <button
             onClick={handleSave}
             className={`save-button ${darkMode ? "dark" : ""}`}
             title="Guardar cambios"
           >
             <Save size={14} />
           </button>
-          <button 
+          <button
             onClick={() => {
               setEditedText(segment.text)
               setIsEditing(false)
@@ -323,8 +323,8 @@ const TranscriptionResult = ({ transcriptionData, onTextUpdate, onSegmentUpdate,
     <div>
       <div className={`transcription-tabs ${darkMode ? "dark" : ""}`}>
         <div className={`transcription-tabs-list ${darkMode ? "dark" : ""}`}>
-          <button 
-            className={`tab-trigger ${viewMode === "full" ? "active" : ""} ${darkMode ? "dark" : ""}`} 
+          <button
+            className={`tab-trigger ${viewMode === "full" ? "active" : ""} ${darkMode ? "dark" : ""}`}
             onClick={() => setViewMode("full")}
           >
             Texto Completo
@@ -339,8 +339,8 @@ const TranscriptionResult = ({ transcriptionData, onTextUpdate, onSegmentUpdate,
 
         {viewMode === "full" && (
           <div className={`transcription-content ${darkMode ? "dark" : ""}`}>
-            <EditableText 
-              text={transcriptionData.text} 
+            <EditableText
+              text={transcriptionData.text}
               onSave={onTextUpdate}
               className="full-text-editor"
               darkMode={darkMode}
@@ -388,9 +388,9 @@ function App() {
   const showToast = (title, description, type = "info") => {
     const id = Date.now()
     const newNotification = { id, title, description, type }
-    
+
     setNotifications(prev => [...prev, newNotification])
-    
+
     setTimeout(() => {
       removeNotification(id)
     }, 5000)
@@ -403,7 +403,7 @@ function App() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
     showToast(
-      darkMode ? "Modo claro activado" : "Modo oscuro activado", 
+      darkMode ? "Modo claro activado" : "Modo oscuro activado",
       `La interfaz ahora está en modo ${darkMode ? "claro" : "oscuro"}`,
       "info"
     )
@@ -469,7 +469,14 @@ function App() {
     if (!transcriptionData) return
 
     const element = document.createElement("a")
-    const file = new Blob([JSON.stringify(transcriptionData.segments, null, 2)], { type: "application/json" })
+    // Formato personalizado: compacto pero con saltos de línea entre objetos
+    const compactJSON = "[\n" +
+      transcriptionData.segments.map(segment =>
+        JSON.stringify(segment)
+      ).join(",\n") +
+      "\n]"
+
+    const file = new Blob([compactJSON], { type: "application/json" })
     element.href = URL.createObjectURL(file)
     element.download = `${transcriptionData.fileName.replace(/\.[^/.]+$/, "")}_transcripcion.json`
     document.body.appendChild(element)
@@ -482,9 +489,16 @@ function App() {
   const copyToClipboard = () => {
     if (!transcriptionData) return
 
-    navigator.clipboard.writeText(JSON.stringify(transcriptionData.segments, null, 2))
+    // Mismo formato para el portapapeles
+    const compactJSON = "[\n" +
+      transcriptionData.segments.map(segment =>
+        JSON.stringify(segment)
+      ).join(",\n") +
+      "\n]"
 
-    showToast("Copiado", "La transcripción ha sido copiada al portapapeles.", "success")
+    navigator.clipboard.writeText(compactJSON)
+
+    showToast("Copiado", "La transcripción ha sido copiada al portapeles.", "success")
   }
 
   const handleTextUpdate = (newText) => {
@@ -499,9 +513,9 @@ function App() {
     setTranscriptionData(prev => {
       const newSegments = [...prev.segments]
       newSegments[index] = updatedSegment
-      
+
       const newText = newSegments.map(s => s.text).join(" ")
-      
+
       return {
         ...prev,
         segments: newSegments,
@@ -516,14 +530,14 @@ function App() {
       {/* Notificaciones */}
       <div className="notifications-container">
         {notifications.map((notification) => (
-          <div 
-            key={notification.id} 
+          <div
+            key={notification.id}
             className={`notification ${notification.type} ${darkMode ? "dark" : ""}`}
           >
             <div className="notification-content">
               <div className="notification-header">
                 <h4>{notification.title}</h4>
-                <button 
+                <button
                   onClick={() => removeNotification(notification.id)}
                   className={`notification-close ${darkMode ? "dark" : ""}`}
                 >
@@ -537,7 +551,7 @@ function App() {
       </div>
 
       {/* Botón de toggle modo oscuro/claro */}
-      <button 
+      <button
         onClick={toggleDarkMode}
         className={`theme-toggle ${darkMode ? "dark" : ""}`}
         title={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
@@ -578,9 +592,9 @@ function App() {
 
               <div className={`or-divider ${darkMode ? "dark" : ""}`}>o</div>
               <div style={{ textAlign: "center" }}>
-                <button 
-                  onClick={handleBrowseClick} 
-                  disabled={isTranscribing} 
+                <button
+                  onClick={handleBrowseClick}
+                  disabled={isTranscribing}
                   className={`button button-outline ${darkMode ? "dark" : ""}`}
                 >
                   <FileAudio size={16} />
@@ -609,11 +623,11 @@ function App() {
           {activeTab === "result" && transcriptionData && (
             <div className={`card ${darkMode ? "dark" : ""}`}>
               <div style={{ marginBottom: "1.5rem" }}>
-                <h2 style={{ 
-                  fontSize: "1.25rem", 
-                  fontWeight: "600", 
-                  color: darkMode ? "#e5e7eb" : "#1f2937", 
-                  marginBottom: "0.5rem" 
+                <h2 style={{
+                  fontSize: "1.25rem",
+                  fontWeight: "600",
+                  color: darkMode ? "#e5e7eb" : "#1f2937",
+                  marginBottom: "0.5rem"
                 }}>
                   {transcriptionData.fileName}
                 </h2>
@@ -625,15 +639,15 @@ function App() {
                 <div className={`transcription-header ${darkMode ? "dark" : ""}`}>
                   <h3>Transcripción</h3>
                   <div className="action-buttons">
-                    <button 
-                      className={`button button-outline ${darkMode ? "dark" : ""}`} 
+                    <button
+                      className={`button button-outline ${darkMode ? "dark" : ""}`}
                       onClick={copyToClipboard}
                     >
                       <Copy size={16} />
                       Copiar
                     </button>
-                    <button 
-                      className={`button button-outline ${darkMode ? "dark" : ""}`} 
+                    <button
+                      className={`button button-outline ${darkMode ? "dark" : ""}`}
                       onClick={downloadTranscription}
                     >
                       <Download size={16} />
@@ -642,7 +656,7 @@ function App() {
                   </div>
                 </div>
 
-                <TranscriptionResult 
+                <TranscriptionResult
                   transcriptionData={transcriptionData}
                   onTextUpdate={handleTextUpdate}
                   onSegmentUpdate={handleSegmentUpdate}
@@ -651,8 +665,8 @@ function App() {
               </div>
 
               <div className="center-button">
-                <button 
-                  className={`button button-primary ${darkMode ? "dark" : ""}`} 
+                <button
+                  className={`button button-primary ${darkMode ? "dark" : ""}`}
                   onClick={() => setActiveTab("upload")}
                 >
                   <Upload size={16} />

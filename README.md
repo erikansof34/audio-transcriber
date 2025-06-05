@@ -43,6 +43,11 @@ audio-transcriber/
 - Node.js v18 o superior
 - Python 3.9 o superior
 - pip (gestor de paquetes de Python)
+- Chocolatey (gestor de paquetes para Windows) - Instalación
+- FFmpeg (instalar después de Chocolatey):
+```bash
+choco install ffmpeg
+```
 
 ---
 
