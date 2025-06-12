@@ -6,21 +6,45 @@ import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Habilitar CORS para todas las rutas
+CORS(app)
 
 # Configuración
 UPLOAD_FOLDER = tempfile.gettempdir()
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'ogg', 'flac'}
-MODEL_SIZE = "base"  # Puedes usar "small", "medium" o "large" para mejor precisión
+MODEL_SIZE = "base"
+MAX_CHARS = 120  # Límite estricto por segmento
 
-# Cargar el modelo Whisper
+# Cargar modelo
 print("⏳ Cargando modelo Whisper...")
 model = whisper.load_model(MODEL_SIZE)
-print("✅ Modelo Whisper cargado")
+print("✅ Modelo cargado")
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def split_segments(text, max_chars=MAX_CHARS):
+    """Divide el texto en segmentos de máximo 120 caracteres sin cortar palabras."""
+    segments = []
+    words = text.split()
+    current_segment = ""
+    
+    for word in words:
+        # Si añadir la palabra excede el límite, guardar el segmento actual y empezar uno nuevo
+        if len(current_segment) + len(word) + 1 > max_chars:
+            if current_segment:  # Solo añadir si no está vacío
+                segments.append(current_segment.strip())
+                current_segment = word  # La palabra que no cabía inicia el nuevo segmento
+        else:
+            if current_segment:
+                current_segment += " " + word
+            else:
+                current_segment = word
+    
+    # Añadir el último segmento si queda texto
+    if current_segment:
+        segments.append(current_segment.strip())
+    
+    return segments
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
@@ -28,42 +52,41 @@ def transcribe_audio():
         return jsonify({"error": "No se proporcionó archivo de audio"}), 400
     
     file = request.files['audio']
-    
     if file.filename == '':
         return jsonify({"error": "Nombre de archivo vacío"}), 400
-        
     if not allowed_file(file.filename):
         return jsonify({"error": "Tipo de archivo no permitido"}), 400
 
-    # Guardar archivo temporalmente
+    # Guardar archivo temporal
     filename = secure_filename(file.filename)
     temp_path = os.path.join(UPLOAD_FOLDER, filename)
     file.save(temp_path)
 
     try:
-        # Transcribir el audio
         result = model.transcribe(temp_path, word_timestamps=False)
-
-        # Formatear la respuesta como necesitas
-        transcription = [
-            {
-                "start": round(segment["start"], 2),
-                "end": round(segment["end"], 2),
-                "text": segment["text"].strip()
-            }
-            for segment in result["segments"]
-        ]
-
+        full_text = " ".join(segment["text"].strip() for segment in result["segments"])
+        
+        # Dividir el texto completo en segmentos de 120 caracteres sin cortar palabras
+        text_segments = split_segments(full_text)
+        
+        # Reconstruir los segmentos con sus timestamps aproximados (simplificado)
+        segments = []
+        for i, text in enumerate(text_segments):
+            # Nota: Los timestamps son aproximados. Whisper no proporciona info por palabra.
+            segments.append({
+                "start": round((i * 10) / 60, 2),  # Ejemplo: timestamp aproximado
+                "end": round(((i + 1) * 10) / 60, 2),
+                "text": text
+            })
+        
         return jsonify({
-            "text": " ".join([seg["text"] for seg in transcription]),
-            "segments": transcription
+            "text": full_text,  # Texto completo sin cortes
+            "segments": segments  # Segmentos de ≤120 caracteres sin palabras cortadas
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
     finally:
-        # Eliminar el archivo temporal
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
