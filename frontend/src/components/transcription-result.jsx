@@ -19,9 +19,8 @@ const TabsTrigger = ({ children, value, onClick, activeValue }) => {
   const isActive = value === activeValue
   return (
     <button
-      className={`flex-1 py-2 px-4 text-center font-medium ${
-        isActive ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
-      }`}
+      className={`flex-1 py-2 px-4 text-center font-medium ${isActive ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"
+        }`}
       onClick={() => onClick(value)}
     >
       {children}
@@ -77,7 +76,9 @@ export default function TranscriptionResult({ transcriptionData }) {
 }
 
 function formatTime(seconds) {
+  if (isNaN(seconds)) return "0:00"
+
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
-  return `${mins}:${seconds.toString().padStart(2, "0")}`
+  return `${mins}:${secs.toString().padStart(2, "0")}`
 }

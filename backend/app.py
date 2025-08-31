@@ -63,25 +63,44 @@ def transcribe_audio():
     file.save(temp_path)
 
     try:
-        result = model.transcribe(temp_path, word_timestamps=False)
-        full_text = " ".join(segment["text"].strip() for segment in result["segments"])
+        # Habilitar word_timestamps para obtener información detallada
+        result = model.transcribe(temp_path, word_timestamps=True)
         
-        # Dividir el texto completo en segmentos de 120 caracteres sin cortar palabras
-        text_segments = split_segments(full_text)
-        
-        # Reconstruir los segmentos con sus timestamps aproximados (simplificado)
+        # Procesar segmentos manteniendo los timestamps originales
         segments = []
-        for i, text in enumerate(text_segments):
-            # Nota: Los timestamps son aproximados. Whisper no proporciona info por palabra.
-            segments.append({
-                "start": round((i * 10) / 60, 2),  # Ejemplo: timestamp aproximado
-                "end": round(((i + 1) * 10) / 60, 2),
-                "text": text
-            })
+        full_text = ""
+        
+        for segment in result["segments"]:
+            segment_text = segment["text"].strip()
+            if segment_text:
+                full_text += segment_text + " "
+                
+                # Dividir el texto del segmento en partes más pequeñas si es necesario
+                if len(segment_text) > MAX_CHARS:
+                    # Si el segmento es demasiado largo, dividirlo pero mantener el timestamp inicial
+                    sub_segments = split_segments(segment_text)
+                    time_per_char = (segment["end"] - segment["start"]) / len(segment_text)
+                    
+                    for i, sub_text in enumerate(sub_segments):
+                        start_time = segment["start"] + (full_text.find(sub_text) * time_per_char)
+                        end_time = start_time + (len(sub_text) * time_per_char)
+                        
+                        segments.append({
+                            "start": round(start_time, 2),
+                            "end": round(end_time, 2),
+                            "text": sub_text
+                        })
+                else:
+                    # Si el segmento es de tamaño adecuado, usarlo tal cual
+                    segments.append({
+                        "start": round(segment["start"], 2),
+                        "end": round(segment["end"], 2),
+                        "text": segment_text
+                    })
         
         return jsonify({
-            "text": full_text,  # Texto completo sin cortes
-            "segments": segments  # Segmentos de ≤120 caracteres sin palabras cortadas
+            "text": full_text.strip(),
+            "segments": segments
         })
 
     except Exception as e:
@@ -89,6 +108,6 @@ def transcribe_audio():
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
-
+            
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
